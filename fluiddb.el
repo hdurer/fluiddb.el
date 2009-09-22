@@ -76,13 +76,44 @@ the FluidDB server"
                      (point-max)))
         (move-end-of-line nil)
         (forward-char)
-        (let ((status url-http-response-status)
-              (content-type url-http-content-type)
-              (content (buffer-substring (point) (point-max))))
+        (let* ((status url-http-response-status)
+               (status-ok (and (<= 200 status)
+                               (<= status 299)))
+               (content-type url-http-content-type)
+               (content (buffer-substring (point) (point-max)))
+               (error-class (unless status-ok
+                              (mail-fetch-field "X-FluidDB-Error-Class")))
+               (request-id (unless status-ok
+                             (mail-fetch-field "X-FluidDB-Request-Id"))))
           (kill-buffer buffer)
-          (if (string-equal content-type "application/json")
+          (if (or (string-equal content-type "application/json")
+                  (string-equal content-type "application/vnd.fluiddb.value+json6"))
               (setq content (json-read-from-string content)))
-          (list status content))))))
+          (if status-ok
+              (list status content content-type)
+            (list status content content-type error-class request-id)))))))
+
+
+(defun fluiddb-bool-to-string (flag)
+  (if flag
+      "True"
+    "False"))
+
+(defun fluiddb-something-to-string (something)
+  "Do sensible conversion to a string"
+  (typecase something
+    (symbol (if (keywordp something)
+                (substring (symbol-name something) 1)
+              (symbol-name something)))
+    (string something)
+    (t (format "%s" something))))
+
+
+(defun fluiddb-make-permission-object (policy exceptions)
+  (json-encode-alist
+   `(("policy" . ,(fluiddb-something-to-string policy))
+     ("exceptions" . ,(mapcar 'fluiddb-something-to-string exceptions)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Users
@@ -135,6 +166,16 @@ the FluidDB server"
                         (or accept "application/vnd.fluiddb.value+json")                          
                         nil))
 
+(defun fluiddb-set-object-tag-value (id tag contents &optional content-type)
+  (fluiddb-send-request "PUT"
+                        (concat "objects/" id "/" tag)
+                        nil
+                        (if content-type
+                            contents
+                          (json-encode contents))
+                        "*/*"
+                        `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -185,7 +226,70 @@ the FluidDB server"
 ;; Policies
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun fluiddb-get-policy (user-name category action)
+  (fluiddb-send-request "GET"
+                        (concat "policies/" 
+                                user-name "/" 
+                                (fluiddb-something-to-string category) "/"
+                                (fluiddb-something-to-string action))
+                        nil
+                        nil
+                        "application/json"
+                        nil))
+
+(defun fluiddb-set-policy (user-name category action policy exceptions)
+  (fluiddb-send-request "PUT"
+                        (concat "policies/" 
+                                user-name "/" 
+                                (fluiddb-something-to-string category) "/"
+                                (fluiddb-something-to-string action))
+                        nil
+                        (fluiddb-make-permission-object policy exceptions)
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tags
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun fluiddb-create-tag (ns name description indexed)
+  (fluiddb-send-request "POST"
+                        (concat "tags/" ns)
+                        nil
+                        (json-encode-alist `(("description" . ,description)
+                                             ("name" . ,name)
+                                             ("indexed" . ,(fluiddb-bool-to-string indexed))))
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
+(defun fluiddb-get-tag (ns tag)
+  (fluiddb-send-request "GET"
+                        (concat "tags/" ns "/" tag)
+                        nil
+                        (json-encode-alist '(("returnDescription" . "True")))
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
+(defun fluiddb-change-tag (ns tag new-description)
+  (fluiddb-send-request "PUT"
+                        (concat "tags/" ns "/" tag)
+                        nil
+                        (json-encode-alist `(("description" . ,new-description)))
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
+(defun fluiddb-delete-tag (ns tag-description)
+  (fluiddb-send-request "DELETE"
+                        (concat "tags/" ns "/" tag)
+                        nil
+                        nil
+                        "*/*"
+                        nil))
+
+
+
 

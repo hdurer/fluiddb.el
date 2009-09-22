@@ -222,6 +222,59 @@ the FluidDB server"
 ;; Permissions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun fluiddb-get-namespace-permissions (namespace action)
+  (fluiddb-send-request "GET"
+                        (concat "permissions/namespaces/" namespace)
+                        `(("action" . ,(fluiddb-something-to-string action)))
+                        nil
+                        "application/json"
+                        nil))
+
+(defun fluiddb-set-namespace-permissions (namespace action policy exceptions)
+  (fluiddb-send-request "PUT"
+                        (concat "permissions/namespaces/" namespace)
+                        `(("action" . ,(fluiddb-something-to-string action)))
+                        (fluiddb-make-permission-object policy exceptions)
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
+(defun fluiddb-get-tag-permissions (tag action)
+  (fluiddb-send-request "GET"
+                        (concat "permissions/tags/" tag)
+                        `(("action" . ,(fluiddb-something-to-string action)))
+                        nil
+                        "application/json"
+                        nil))
+
+(defun fluiddb-set-tag-permissions (tag action policy exceptions)
+  (fluiddb-send-request "PUT"
+                        (concat "permissions/tags/" tag)
+                        `(("action" . ,(fluiddb-something-to-string action)))
+                        (fluiddb-make-permission-object policy exceptions)
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+(defun fluiddb-get-tag-value-permissions (tag action)
+  (fluiddb-send-request "GET"
+                        (concat "permissions/tag-values/" tag-value)
+                        `(("action" . ,(fluiddb-something-to-string action)))
+                        nil
+                        "application/json"
+                        nil))
+
+(defun fluiddb-set-tag-value-permissions (tag action policy exceptions)
+  (fluiddb-send-request "PUT"
+                        (concat "permissions/tag-values/" tag-value)
+                        `(("action" . ,(fluiddb-something-to-string action)))
+                        (fluiddb-make-permission-object policy exceptions)
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Policies
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

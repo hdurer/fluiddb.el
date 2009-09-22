@@ -60,7 +60,10 @@ the FluidDB server"
                           "="
                           (browse-url-url-encode-chars value "[+ &?]")))))
       (let* ((url-request-method method)
+             (url-http-attempt-keepalives nil)
              (url-mime-accept-string accept-value)
+             (url-mime-charset-string nil)
+             (url-extensions-header nil)
              (url-request-data body)
              (url-request-extra-headers extra-headers)
              (url (concat "http://" *fluiddb-server* "/" url-extra))
@@ -106,6 +109,32 @@ the FluidDB server"
                         nil
                         "application/json"
                         nil))
+
+(defun fluiddb-query-objects (query)
+  (fluiddb-send-request "GET"
+                        "objects"
+                        `(("query" . ,query))
+                        nil
+                        "application/json"
+                        nil))
+
+(defun fluiddb-create-object (&optional about)
+  (fluiddb-send-request "POST"
+                        "objects"
+                        nil
+                        (when about
+                          (json-encode-alist `(("about" . ,about))))
+                        "application/json"
+                        nil))
+
+(defun fluiddb-get-object-tag-value (id tag &optional accept)
+  (fluiddb-send-request "GET"
+                        (concat "objects/" id "/" tag)
+                        nil
+                        nil
+                        (or accept "application/vnd.fluiddb.value+json")                          
+                        nil))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

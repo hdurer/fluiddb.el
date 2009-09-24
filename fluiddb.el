@@ -90,8 +90,8 @@ the FluidDB server"
                   (string-equal content-type "application/vnd.fluiddb.value+json6"))
               (setq content (json-read-from-string content)))
           (if status-ok
-              (list status content content-type)
-            (list status content content-type error-class request-id)))))))
+              (list status-ok content status content-type)
+            (list status-ok content status content-type error-class request-id)))))))
 
 
 (defun fluiddb-bool-to-string (flag)
@@ -156,7 +156,7 @@ the FluidDB server"
                         (when about
                           (json-encode-alist `(("about" . ,about))))
                         "application/json"
-                        nil))
+                        '(("Content-Type" . "application/json"))))
 
 (defun fluiddb-get-object-tag-value (id tag &optional accept)
   (fluiddb-send-request "GET"
@@ -344,5 +344,4 @@ the FluidDB server"
                         nil))
 
 
-
-
+(provide 'fluiddb)

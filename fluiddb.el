@@ -94,10 +94,10 @@ the FluidDB server"
             (list status-ok content status content-type error-class request-id)))))))
 
 
-(defun fluiddb-bool-to-string (flag)
+(defun fluiddb-bool-to-json-bool (flag)
   (if flag
-      "True"
-    "False"))
+      t
+    :json-false))
 
 (defun fluiddb-something-to-string (something)
   "Do sensible conversion to a string"
@@ -312,7 +312,7 @@ the FluidDB server"
                         nil
                         (json-encode-alist `(("description" . ,description)
                                              ("name" . ,name)
-                                             ("indexed" . ,(fluiddb-bool-to-string indexed))))
+                                             ("indexed" . ,(fluiddb-bool-to-json-bool indexed))))
                         "application/json"
                         '(("Content-Type" . "application/json"))))
 

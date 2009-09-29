@@ -329,10 +329,10 @@ the FluidDB server"
 (defun fluiddb-get-tag (ns tag)
   (fluiddb-send-request "GET"
                         (concat "tags/" ns "/" tag)
+                        '(("returnDescription" . "True"))
                         nil
-                        (json-encode-alist '(("returnDescription" . "True")))
                         "application/json"
-                        '(("Content-Type" . "application/json"))))
+                        nil))
 
 
 (defun fluiddb-change-tag (ns tag new-description)

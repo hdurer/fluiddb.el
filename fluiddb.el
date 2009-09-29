@@ -34,6 +34,14 @@
   "The server to use for calls -- either the main instance or sandbox")
 
 
+(defvar *fluiddb-within-call* nil
+  "Helper variable to indicate if we are withing a fluiddb call and thus won't want the authentication mechanisms to kick in")
+
+(defadvice url-http-handle-authentication (around fluiddb-fix)
+  (unless *fluiddb-within-call*
+      ad-do-it))
+(ad-activate 'url-http-handle-authentication)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Support functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -59,7 +67,8 @@ the FluidDB server"
                           param
                           "="
                           (browse-url-url-encode-chars value "[+ &?]")))))
-      (let* ((url-request-method method)
+      (let* ((*fluiddb-within-call* t)
+             (url-request-method method)
              (url-http-attempt-keepalives nil)
              (url-mime-accept-string accept-value)
              (url-mime-charset-string nil)

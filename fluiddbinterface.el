@@ -125,7 +125,11 @@
       (if *fluiddb-credentials*
           (insert-string (car *fluiddb-credentials*))
         (insert-string "*None* (anonymous)")))
+  (newline)
+  (insert-string "____________________________________________________")
   (newline))
+
+
 
 (defun fluiddb-do-change-authentication (&optional buffer)
   (interactive)
@@ -146,6 +150,7 @@
     (if next
         (goto-char next)
       (message "No next region"))))
+
 
 (defun fluiddb-browser-previous-region ()
   (interactive)
@@ -190,6 +195,13 @@
                (list (lambda (tag)
                        (fluiddb-browse-tag tag))
                      tag)))
+
+(defun fluiddb-make-user-markup (overlay user-name)
+  (overlay-put overlay 'face 'bold)
+  (overlay-put overlay 'action 
+               (list (lambda (name)
+                       (fluiddb-browse-user name))
+                     user-name)))
 
 (defun fluiddb-make-ns-markup (overlay ns)
   (overlay-put overlay 'face 'bold)
@@ -251,7 +263,7 @@
                        tag))
     (overlay-put overlay 'view-action  
                  (list view-tag-value
-                       guid tag))))
+                       guid tag)))
 
 
 
@@ -341,7 +353,8 @@
                 (insert-string ns))
             (insert-string "'"))
           (newline)
-          (let ((description (cdr (assoc 'description (second res))))
+          (let ((user (first (split-string full-tag "/")))
+                (description (cdr (assoc 'description (second res))))
                 (id (cdr (assoc 'id (second res))))
                 (indexed (cdr (assoc 'indexed (second res)))))
             (insert-string (format "  Id:          " ))
@@ -356,10 +369,40 @@
             (newline)
             (insert-string (format "  Is indexed:  %s" (if indexed "Yes" "No")))
             (newline)))
+            (insert-string "  Belongs to:  ")
+            (fluiddb-with-new-active-region (function fluiddb-make-user-markup)
+                (list user)
+                (insert-string (format "%s" user)))
+            (newline)
         (insert-string
-         (format "Error getting object %s -- %s %s %s %s" 
-                 guid
+         (format "Error getting tag %s -- %s %s %s %s" 
+                 full-tag
                  (third res) (fifth res) (sixth res)))))))
+
+
+(defun fluiddb-show-user (name)
+  (let ((res (fluiddb-get-user name)))
+      (if (first res)
+        (progn
+          ;; ok result
+          (fluiddb-with-new-active-region (function fluiddb-make-title-markup) 
+              ()
+              (insert-string (format "User '%s'\n" name)))
+          (let ((id (cdr (assoc 'id (second res)))))
+            (insert-string (format "  Id:          " ))
+            (fluiddb-with-new-active-region (function fluiddb-make-id-markup) 
+                (list id)
+                (insert-string id))
+            (newline)
+            (insert-string "  User's namespace: ")
+            (fluiddb-with-new-active-region (function fluiddb-make-ns-markup)
+                (list name)
+                (insert-string (format "%s" name)))
+            (newline)))
+        (insert-string
+         (format "Error getting user %s -- %s %s %s"
+                 name
+                 (third res) (fifth res) (sixth res))))))
 
 
 (defun fluiddb-show-ns (ns)
@@ -381,7 +424,8 @@
                   (insert-string parent-ns)))
             (insert-string "'"))
           (newline)
-          (let ((description (cdr (assoc 'description (second res))))
+          (let ((user (first (split-string ns "/")))
+                (description (cdr (assoc 'description (second res))))
                 (id (cdr (assoc 'id (second res))))
                 (tags (cdr (assoc 'tagNames (second res))))
                 (sub-namespaces (cdr (assoc 'namespaceNames (second res)))))
@@ -394,6 +438,11 @@
             (fluiddb-with-new-active-region (function fluiddb-make-about-markup)
                 (list description)
                 (insert-string (format "%s" description)))
+            (newline)
+            (insert-string "  Belongs to:  ")
+            (fluiddb-with-new-active-region (function fluiddb-make-user-markup)
+                (list user)
+                (insert-string (format "%s" user)))
             (newline)
             (newline)
             ;; format the sub-namespaces
@@ -420,8 +469,8 @@
                            (insert-string tag))
                        (newline)))))
         (insert-string
-         (format "Error getting object %s -- %s %s %s %s" 
-                 guid
+         (format "Error getting namespace %s -- %s %s %s %s" 
+                 ns
                  (third res) (fifth res) (sixth res)))))))
 
 
@@ -434,13 +483,14 @@
   (ecase (car item)
     (:object (fluiddb-show-object (cadr item)))
     (:tag (fluiddb-show-tag (cadr item)))
+    (:user (fluiddb-show-user (cadr item)))
     (:namespace (fluiddb-show-ns (cadr item))))
 
   (setf fluiddb-active-regions (sort fluiddb-active-regions
                                      (lambda (a b)
                                        (< (car a) (car b)))))
-  (goto-char (if fluiddb-active-regions
-                 (caar fluiddb-active-regions)
+  (goto-char (if (cdr fluiddb-active-regions)
+                 (caadr fluiddb-active-regions)
                (point-min)))
   (toggle-read-only 1)
   (message "done"))
@@ -468,6 +518,12 @@
   "Browse a specific tag in the FluidDB"
   (interactive "sTag: ")
   (let ((action (list :tag tag)))
+    (fluiddb-show-this action t)))
+
+(defun fluiddb-browse-user (user-name)
+  "Browse a specific user in the FluidDB"
+  (interactive "sUser name: ")
+  (let ((action (list :user user-name)))
     (fluiddb-show-this action t)))
 
 

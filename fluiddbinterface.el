@@ -344,7 +344,7 @@
           (let ((description (cdr (assoc 'description (second res))))
                 (id (cdr (assoc 'id (second res))))
                 (indexed (cdr (assoc 'indexed (second res)))))
-            (insert-string (format "  Id:       " ))
+            (insert-string (format "  Id:          " ))
             (fluiddb-with-new-active-region (function fluiddb-make-id-markup) 
                 (list id)
                 (insert-string id))
@@ -354,7 +354,7 @@
                 (list description)
                 (insert-string (format "%s" description)))
             (newline)
-            (insert-string (format "  Is indexed: %s" (if indexed "Yes" "No")))
+            (insert-string (format "  Is indexed:  %s" (if indexed "Yes" "No")))
             (newline)))
         (insert-string
          (format "Error getting object %s -- %s %s %s %s" 
@@ -385,7 +385,7 @@
                 (id (cdr (assoc 'id (second res))))
                 (tags (cdr (assoc 'tagNames (second res))))
                 (sub-namespaces (cdr (assoc 'namespaceNames (second res)))))
-            (insert-string (format "  Id:       " ))
+            (insert-string (format "  Id:          "))
             (fluiddb-with-new-active-region (function fluiddb-make-id-markup) 
                 (list id)
                 (insert-string id))
@@ -395,22 +395,30 @@
                 (list description)
                 (insert-string (format "%s" description)))
             (newline)
+            (newline)
             ;; format the sub-namespaces
             (insert-string (format "  %s sub-namespaces:" (length sub-namespaces)))
             (newline)
             (loop for index from 1
-                  for sub-ns in sub-namespaces
+                  for sub-ns across sub-namespaces
                   do (progn
                        (insert-string (format "  %3d: " index))
+                       (fluiddb-with-new-active-region (function fluiddb-make-ns-markup)
+                           (list (concat ns "/" sub-ns))
+                           (insert-string sub-ns))
                        (newline)))
             ;; format the tags within this namespace
+            (newline)
             (insert-string (format "  %s tags:" (length tags)))
             (newline)
             (loop for index from 1
-                  for tag in tags
+                  for tag across tags
                   do (progn
                        (insert-string (format "  %3d: " index))
-                       (newline))))
+                       (fluiddb-with-new-active-region (function fluiddb-make-tag-markup)
+                           (list (concat ns "/" tag))
+                           (insert-string tag))
+                       (newline)))))
         (insert-string
          (format "Error getting object %s -- %s %s %s %s" 
                  guid

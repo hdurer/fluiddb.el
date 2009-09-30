@@ -26,6 +26,7 @@
   "Fluiddb-mode hook.")
 (defvar fluiddb-mode-map (make-sparse-keymap "FluidDB"))
 
+
 (defun fluiddb-mode-init-variables ()
   (font-lock-mode -1))
 
@@ -60,22 +61,37 @@
 
 
 (if fluiddb-mode-map
-    (let ((km fluiddb-mode-map))
+    (let ((km fluiddb-mode-map)
+          (bm (make-sparse-keymap)))
+
       (define-key km "v" 'fluiddb-browser-view-at-point)
       (define-key km (kbd "RET") 'fluiddb-browser-action-at-point)
-      (define-key km "f" 'fluiddb-browser-forward-in-history)
+      
       (define-key km "g" 'fluiddb-browser-reload)
+      (define-key km "t" 'fluiddb-browser-add-tag-values)
+
+      ;; navigation
+      (define-key km "f" 'fluiddb-browser-forward-in-history)
       (define-key km "b" 'fluiddb-browser-backward-in-history)
+
       (define-key km (kbd "TAB") 'fluiddb-browser-next-region)
       (define-key km (kbd "S-TAB") 'fluiddb-browser-previous-region)
       (define-key km (kbd "<backtab>") 'fluiddb-browser-previous-region)
-      ;;(define-key km "\C-c\C-f" 'fluiddb-foo)
-      ;;(define-key km "\C-c\C-b" 'fluiddb-bar)
+
+      ;; the Browse sub commands
+      (define-key km "B" bm)
+      (define-key bm "t" 'fluiddb-browse-tag)
+      (define-key bm "u" 'fluiddb-browse-user)
+      (define-key bm "q" 'fluiddb-browse-query)
+      (define-key bm "n" 'fluiddb-browse-namespace)
+      (define-key bm "o" 'fluiddb-browse-object)
+
       nil))
 
 (make-variable-buffer-local 'fluiddb-browse-objects)
 (make-variable-buffer-local 'fluiddb-browse-current-object)
 (make-variable-buffer-local 'fluiddb-active-regions)
+(make-variable-buffer-local 'fluiddb-buffer-id-markers)
 
 
 
@@ -94,6 +110,12 @@
     (values ns last)))
 
 
+(defun fluiddb-make-presentable-string (object mime-type)
+  (let ((string (format "%s" object)))
+    (if (> (length string) 100)
+        (concat (substring string 0 97) "...")
+      string)))
+
 (defun fluiddb-get-a-buffer ()
   (let ((confirm-nonexistent-file-or-buffer nil))
     (switch-to-buffer "*fluiddb*"))
@@ -103,9 +125,9 @@
 (defmacro fluiddb-with-new-active-region (setup-function setup-args &rest body)
   "Set up an overlay for region produced by body.  Call setup-function on the overlay and push admin info about it into buffer-local list for traversal."
   (let ((start (gensym "start")))
-    `(let ((,start (point)))
+    `(let ((,start (point-marker)))
        ,@body
-       (let* ((end (point))
+       (let* ((end (point-marker))
               (overlay (make-overlay ,start end)))
          (apply ,setup-function overlay ,setup-args)
          (push (cons ,start end) fluiddb-active-regions)))))
@@ -144,7 +166,7 @@
   (interactive)
   (let* ((current (point))
          (next (loop for pos in fluiddb-active-regions
-                     for start = (car pos)
+                     for start = (marker-position (car pos))
                      when (> start current)
                      do (return start))))
     (if next
@@ -156,7 +178,7 @@
   (interactive)
   (let* ((current (point))
          (next (loop for pos in (reverse fluiddb-active-regions)
-                     for start = (car pos)
+                     for start = (marker-position (car pos))
                      when (< start current)
                      do (return start))))
     (if next
@@ -209,6 +231,13 @@
                (list (lambda (ns)
                        (fluiddb-browse-namespace ns))
                      ns)))
+
+(defun fluiddb-make-query-markup (overlay query)
+  (overlay-put overlay 'face 'bold)
+  (overlay-put overlay 'action
+               (list (lambda (query)
+                       (fluiddb-browse-query query))
+                     query)))
 
 
 
@@ -263,7 +292,7 @@
                        tag))
     (overlay-put overlay 'view-action  
                  (list view-tag-value
-                       guid tag)))
+                       guid tag))))
 
 
 
@@ -277,6 +306,32 @@
   (interactive)
   (fluiddb-show-this fluiddb-browse-current-object nil))
 
+(defun fluiddb-browser-add-tag-values (tag)
+  (interactive "sTag to show: ")
+  (if fluiddb-buffer-id-markers
+      (progn
+        (toggle-read-only 0)
+        (loop for (id marker) in fluiddb-buffer-id-markers
+              do (progn
+                   (goto-char marker)
+                   (newline)
+                   (insert-string "        - ")
+                   (fluiddb-with-new-active-region (function fluiddb-make-tag-markup)
+                       (list tag)
+                       (insert-string tag))
+                   (insert-string ": ")
+                   (let ((res (fluiddb-get-object-tag-value id tag "*/*")))
+                     (if (first res)
+                         ;; ok
+                         (let ((text (fluiddb-make-presentable-string (second res) (fourth res))))
+                           (fluiddb-with-new-active-region (function fluiddb-make-about-markup)
+                               (list (second res))
+                               (insert-string text))
+                           (insert-string (format " (%s)" (fourth res))))
+                       (insert-string (format "Failed: %s %s %s" (third res) (fifth res) (sixth res)))))n
+                   (sit-for 0)))
+        (toggle-read-only 1))
+    (message "Nothing here to show tags on!")))
 
 (defun fluiddb-browser-backward-in-history ()
   (interactive)
@@ -474,17 +529,50 @@
                  (third res) (fifth res) (sixth res)))))))
 
 
+(defun fluiddb-show-query (query)
+  (let ((res (fluiddb-query-objects query)))
+    (if (first res)
+        (let ((ids (cdr (assoc 'ids (second res)))))
+          ;; ok result
+          (fluiddb-with-new-active-region (function fluiddb-make-title-markup) 
+              ()
+              (insert-string (format "%d results for query '" (length ids)))
+            (fluiddb-with-new-active-region (function fluiddb-make-query-markup)
+                (list query)
+                (insert-string query))
+            (insert-string "'"))
+          (newline)
+          (newline)
+          (loop for index from 1
+                for id across ids
+                do (progn
+                     (insert-string (format "  %3d: " index))
+                     (fluiddb-with-new-active-region (function fluiddb-make-id-markup) 
+                         (list id)
+                         (insert-string id))
+                     (push (list id (point-marker)) fluiddb-buffer-id-markers)
+                     (newline)))
+          (setq fluiddb-buffer-id-markers (nreverse fluiddb-buffer-id-markers)))
+      (insert-string
+       (format "Error performing query %s -- %s %s %s %s" 
+               query
+               (third res) (fifth res) (sixth res))))))
+
+
 (defun fluiddb-show-this (item add-to-history)
   (fluiddb-setup-buffer item)
   (setq fluiddb-browse-current-object item)
   (when add-to-history
     (setq fluiddb-browse-objects (cons item fluiddb-browse-objects)))
+  
+  (setq fluiddb-buffer-id-markers nil) ;; reset anything in there already
 
-  (ecase (car item)
-    (:object (fluiddb-show-object (cadr item)))
-    (:tag (fluiddb-show-tag (cadr item)))
-    (:user (fluiddb-show-user (cadr item)))
-    (:namespace (fluiddb-show-ns (cadr item))))
+  (ecase (first item)
+    (:query (fluiddb-show-query (second item)))
+    (:object (fluiddb-show-object (second item)))
+    (:tag (fluiddb-show-tag (second item)))
+    (:user (fluiddb-show-user (second item)))
+    (:namespace (fluiddb-show-ns (second item))))
 
   (setf fluiddb-active-regions (sort fluiddb-active-regions
                                      (lambda (a b)
@@ -525,6 +613,16 @@
   (interactive "sUser name: ")
   (let ((action (list :user user-name)))
     (fluiddb-show-this action t)))
+
+
+(defun fluiddb-browse-query (query)
+  "Do a query against FluidDB and show the results"
+  (interactive "sQuery: ")
+  (if (string-equal "" query)
+      (message "No query given")
+    (let ((action (list :query query)))
+      (fluiddb-show-this action t))))
+
 
 
 (provide 'fluiddbinterface)

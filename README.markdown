@@ -16,6 +16,43 @@ The high-level interface is still in active development, allows read-only access
 The high-level interface
 ------------------------
 
+Note that this "high-level" interface still requires good
+understanding of the FluidDB workings; it is not intended for the
+general user but for people developing against FluidDB to inspect and
+change data.
+
+You enter the high-level interface by invoking one of these functions:
+
+ - fluiddb-browse-user (user-name)
+ - fluiddb-browse-namespace (namespace-name)
+ - fluiddb-browse-tag (namespace-and-tag)
+ - fluiddb-browse-query (query)
+ - fluiddb-browse-object (guid)
+
+You will find yourself in a FluidDb specific buffer.
+
+At any time the `g` key will re-load the current buffer (re-fetch the
+data and completely re-draw the buffer).
+
+Use the `b` and `f` keys to navigate in the browsing history (just
+like the back and forward button on your web browser).
+
+Use `TAB` and `S-TAB` to navigate the active regions of the buffer.
+
+While the cursor is on an active region you can usually press `RET` to
+do the common browsing action for the current object (e.g. to browse
+to that object when on a tag name, user name, etc.).  Often `v` works
+to view that object in a temporary buffer.
+
+The key sequences `B u`, `B n`, `B t`, `B q`, and `B o` can be used
+browse a complete unrelated instance (user, namespace, tag, query, and
+object respectively) not reachable via some active region.
+
+Where it makes sense (currently implemented only for the query results
+view) you can press `t` to fetch object tag values for the shown
+object and tags.
+
+
 
 The low-level interface
 -----------------------
@@ -25,7 +62,6 @@ The API generally follows the style set by [cl-fluiddb](http://github.com/hdurer
 If you want to do non-anonymous access, set the *fluiddb-credentials* variable to a cons of user-name and password.
 
 Available functions are:
-
 
  - fluiddb-get-user (user-name)
  - fluiddb-get-object (guid)
@@ -51,4 +87,5 @@ Available functions are:
  - fluiddb-delete-tag (ns tag-description)
 
 Helper functions are:
+
  - fluiddb-make-permission-object (policy exceptions)

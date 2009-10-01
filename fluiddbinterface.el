@@ -116,6 +116,12 @@
         (concat (substring string 0 97) "...")
       string)))
 
+(defun fluiddb-resort-buffer-markers ()
+  (setf fluiddb-active-regions (sort fluiddb-active-regions
+                                     (lambda (a b)
+                                       (< (car a) (car b))))))
+
+
 (defun fluiddb-get-a-buffer ()
   (let ((confirm-nonexistent-file-or-buffer nil))
     (switch-to-buffer "*fluiddb*"))
@@ -202,9 +208,11 @@
       (message "Nothing to do at point"))))
 
 (defun fluiddb-make-title-markup (overlay)
-  (overlay-put overlay 'face 'bold-italic))
+  (overlay-put overlay 'face 'bold-italic)
+  (overlay-put overlay 'help-echo "Title field describing this page"))
 
 (defun fluiddb-make-id-markup (overlay id)
+  (overlay-put overlay 'help-echo "An id. Press 'RET' to browse to this id.")
   (overlay-put overlay 'face 'bold)
   (overlay-put overlay 'action 
                (list (lambda (id) 
@@ -212,6 +220,7 @@
                      id)))
 
 (defun fluiddb-make-tag-markup (overlay tag)
+  (overlay-put overlay 'help-echo "A tag. Press 'RET' to browse to this tag.")
   (overlay-put overlay 'face 'bold)
   (overlay-put overlay 'action 
                (list (lambda (tag)
@@ -219,6 +228,7 @@
                      tag)))
 
 (defun fluiddb-make-user-markup (overlay user-name)
+  (overlay-put overlay 'help-echo "A user. Press 'RET' to browse to this user.")
   (overlay-put overlay 'face 'bold)
   (overlay-put overlay 'action 
                (list (lambda (name)
@@ -226,6 +236,7 @@
                      user-name)))
 
 (defun fluiddb-make-ns-markup (overlay ns)
+  (overlay-put overlay 'help-echo "A namespace. Press 'RET' to browse to this namespace.")
   (overlay-put overlay 'face 'bold)
   (overlay-put overlay 'action
                (list (lambda (ns)
@@ -233,18 +244,17 @@
                      ns)))
 
 (defun fluiddb-make-query-markup (overlay query)
+  (overlay-put overlay 'help-echo "A query. Press 'RET' to browse to this query.")
   (overlay-put overlay 'face 'bold)
   (overlay-put overlay 'action
                (list (lambda (query)
                        (fluiddb-browse-query query))
                      query)))
 
-
-
 (defun fluiddb-make-about-markup (overlay text)
+  (overlay-put overlay 'help-echo "'v' or 'RET' to view")
   (overlay-put overlay 'face 'italic)
   (overlay-put overlay 'text text)
-  (overlay-put overlay 'help-echo "The 'about' text of this object.  'v' to view")
   (let ((view-action (lambda (text)
                        (with-output-to-temp-buffer "*FluidDB about text*"
                          (princ text)))))
@@ -286,7 +296,7 @@
                                                          tag-name guid (third res)
                                                          (fifth res) (sixth res))))))))))
     (overlay-put overlay 'face 'bold)
-    (overlay-put overlay 'help-echo "Tag value.  'v' to view; 'ret' to examine the tag")
+    (overlay-put overlay 'help-echo "Tag value.  'v' to view; 'ret' to browse to the tag")
     (overlay-put overlay 'action  
                  (list (function fluiddb-browse-tag)
                        tag))
@@ -328,7 +338,8 @@
                                (list (second res))
                                (insert-string text))
                            (insert-string (format " (%s)" (fourth res))))
-                       (insert-string (format "Failed: %s %s %s" (third res) (fifth res) (sixth res)))))n
+                       (insert-string (format "Failed: %s %s %s" (third res) (fifth res) (sixth res)))))
+                   (fluiddb-resort-buffer-markers)
                    (sit-for 0)))
         (toggle-read-only 1))
     (message "Nothing here to show tags on!")))
@@ -552,11 +563,15 @@
                          (insert-string id))
                      (push (list id (point-marker)) fluiddb-buffer-id-markers)
                      (newline)))
+          (newline)
+          (newline)
+          (insert-string "(press 't' to add object-tag values)")
           (setq fluiddb-buffer-id-markers (nreverse fluiddb-buffer-id-markers)))
       (insert-string
        (format "Error performing query %s -- %s %s %s %s" 
                query
                (third res) (fifth res) (sixth res))))))
+
 
 
 (defun fluiddb-show-this (item add-to-history)
@@ -574,9 +589,7 @@
     (:user (fluiddb-show-user (second item)))
     (:namespace (fluiddb-show-ns (second item))))
 
-  (setf fluiddb-active-regions (sort fluiddb-active-regions
-                                     (lambda (a b)
-                                       (< (car a) (car b)))))
+  (fluiddb-resort-buffer-markers)
   (goto-char (if (cdr fluiddb-active-regions)
                  (caadr fluiddb-active-regions)
                (point-min)))

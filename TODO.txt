@@ -1,0 +1,25 @@
+;;                                                                  -*- org -*-
+
+The current code is still in early stages.
+Obvious tasks that still need doing:
+
+* Capabilities
+ - [ ] Add viewing of Permissions on all object
+ - [ ] Add viewing of Policies
+ - [ ] Create objects
+ - [ ] Changing object tag values
+ - [ ] Create-Update-Delete of tags
+ - [ ] Create-Update-Delete of namespaces
+ - [ ] Create-Update-Delete of objects
+ - [ ] Changing permissions on all of the above
+ - [ ] Changing policies
+
+* Functionality
+ - [ ] Check all operations work with binary, especially non-ASCII data
+
+* Interface
+ - [X] Add history
+ - [X] Add easier navigation of active regions
+ - [ ] Better GUI -- prettier faces in overlays
+ - [ ] Better viewing support for tag values (currently only GIF and PNG, everything else handled as text)
+

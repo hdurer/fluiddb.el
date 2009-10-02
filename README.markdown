@@ -13,6 +13,19 @@ Note that the low-level support is currently only for synchronous calls.  Ideall
 The high-level interface is still in active development, allows read-only access only so far and is still lacking support to view permissions and policies.
 
 
+Dependencies
+------------
+
+You will need the `json.el` package.  I found mine via EmacsWiki [here](http://cvs.savannah.gnu.org/viewvc/*checkout*/emacs/lisp/json.el?root=emacs).
+
+The code makes use of url.el which is now shipped with Emacs.  
+For older Emacs versions you will need to install that yourself -- very old versions don't seem to work according to user reports but Emacs 22 seems to be ok.
+
+
+You will also need a user account on the FluidDB server (not strictly necessary for the pure browsing operations).  
+Either sign up on the web site and then get your password on the `#fluiddb` IRC channel or send an email to `api@fluidinfo.com`.
+
+
 The high-level interface
 ------------------------
 
@@ -89,3 +102,19 @@ Available functions are:
 Helper functions are:
 
  - fluiddb-make-permission-object (policy exceptions)
+
+
+Installation
+------------
+Place the `fluiddb.el` and  `fluiddbinterface.el` files somewhere in your `load-path`.
+
+Then modify your `.emacs.el` (or whatever init file you use) to contain either
+
+    (require 'fluiddbinterface)
+
+or more lazily:
+    (autoload 'fluiddb-browse-user "fluiddbinterface.el" "Browse a specific user in the FluidDB" t)
+    (autoload 'fluiddb-browse-namespace "fluiddbinterface.el" "Browse a specific namespace in the FluidDB" t) 
+    (autoload 'fluiddb-browse-tag "fluiddbinterface.el" "Browse a specific tag in the FluidDB" t)
+    (autoload 'fluiddb-browse-query "fluiddbinterface.el" "Do a query against FluidDB and show the results" t)
+    (autoload 'fluiddb-browse-object "fluiddbinterface.el" "Browse a specific object in the FluidDB" t)

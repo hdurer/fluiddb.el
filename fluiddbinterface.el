@@ -6,25 +6,66 @@
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation; version 2.
-
+;;
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
-
+;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth floor,
 ;; Boston, MA 02110-1301, USA.
 
+;;; Installation:
+;; Place the fluiddb.el and this fluiddbinterface.el files somewhere
+;; in your load-path.
+;;
+;;; Requirements
+;; You will need json.el -- e.g. from
+;; http://cvs.savannah.gnu.org/viewvc/*checkout*/emacs/lisp/json.el?root=emacs
+;;
+;; This file makes use of url.el which is now shipped with Emacs.  For
+;; older Emacs versions you will need to install that yourself -- very
+;; old versions of url.el don't seem to work according to user
+;; reports.
+;;
+;;
+;; Then either:
+;; (require 'fluiddbinterface)
+;;
+;; or more lazily:
+;; (autoload 'fluiddb-browse-user "fluiddbinterface.el" "Browse a specific user in the FluidDB" t)
+;; (autoload 'fluiddb-browse-namespace "fluiddbinterface.el" "Browse a specific namespace in the FluidDB" t) 
+;; (autoload 'fluiddb-browse-tag "fluiddbinterface.el" "Browse a specific tag in the FluidDB" t)
+;; (autoload 'fluiddb-browse-query "fluiddbinterface.el" "Do a query against FluidDB and show the results" t)
+;; (autoload 'fluiddb-browse-object "fluiddbinterface.el" "Browse a specific object in the FluidDB" t)
 
-(require 'fluiddb)
+;;; Usage:
+;; Invoke any of these five commands mentioned above to enter at
+;; FluidDB buffer.  This buffer tries to behave a bit like a web
+;; browser with ability to walk the browsing history ('b' and 'f') and
+;; to refresh the view ('g').
+;;
+;; Various bit of text (names of tags, user, namespaces, ...) are
+;; active (use 'TAB' and 'S-TAB' to navigate between them) and 'RET'
+;; will usually do the sensible action on them (e.g. browse to that
+;; object)
+;; 
+;; Queries are a bit more complicated: Perform a query and then within
+;; that buffer press 't' to specify a tag name and to the fetch the
+;; object tag values for all objects found in that query.
+
+
+(require 'fluiddb)                      ;; we need to underlying API functionality
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mode specific stuff
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar fluiddb-mode-hook nil
   "Fluiddb-mode hook.")
-(defvar fluiddb-mode-map (make-sparse-keymap "FluidDB"))
+
+(defvar fluiddb-mode-map (make-sparse-keymap "FluidDB")
+  "The keymap for the Fluiddb-mode buffers")
 
 
 (defun fluiddb-mode-init-variables ()
@@ -45,7 +86,8 @@
 
 
 (defun fluiddb-mode ()
-  "Major mode for Fluiddb interaction
+  "Major mode for browsing the Fluiddb data.
+
 \\{fluiddb-mode-map}"
   (unless fluiddb-browse-objects
     (kill-all-local-variables))
@@ -94,8 +136,13 @@
 (make-variable-buffer-local 'fluiddb-buffer-id-markers)
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Utility functions
 
 (defun fluiddb-split-name (name)
+  "Split a name (tag or namespace) into the containing namespace part and the basename part.
+Returns two values - namespace and basename.
+The namespace part can be emtpy if there is only one component."
   (let* ((parts (split-string name "/"))
          (n-parts (length parts))
          (ns (with-output-to-string
@@ -111,25 +158,36 @@
 
 
 (defun fluiddb-make-presentable-string (object mime-type)
+  "Convert object of mime-type into something short we can show to the user."
   (let ((string (format "%s" object)))
     (if (> (length string) 100)
         (concat (substring string 0 97) "...")
       string)))
 
+
+(defun fluiddb-get-a-buffer ()
+  "Get a FluidDB buffer.  
+If the current buffer is a FluidDB buffer use that, otherwise switch to *fluiddb*."
+  (unless (eq major-mode 'fluiddb-mode)
+    (let ((confirm-nonexistent-file-or-buffer nil))
+      (switch-to-buffer "*fluiddb*")))
+  (fluiddb-mode)
+  (toggle-read-only 0))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Overlay/active regions operations
 (defun fluiddb-resort-buffer-markers ()
+  "Re-sort the internal list of active regions after it has changed."
   (setf fluiddb-active-regions (sort fluiddb-active-regions
                                      (lambda (a b)
                                        (< (car a) (car b))))))
 
 
-(defun fluiddb-get-a-buffer ()
-  (let ((confirm-nonexistent-file-or-buffer nil))
-    (switch-to-buffer "*fluiddb*"))
-  (fluiddb-mode)
-  (toggle-read-only 0))
-
 (defmacro fluiddb-with-new-active-region (setup-function setup-args &rest body)
-  "Set up an overlay for region produced by body.  Call setup-function on the overlay and push admin info about it into buffer-local list for traversal."
+  "Set up an overlay for region produced by body.
+Call setup-function on the overlay and push admin info about it
+into buffer-local list for traversal."
   (let ((start (gensym "start")))
     `(let ((,start (point-marker)))
        ,@body
@@ -140,92 +198,34 @@
 (put 'fluiddb-with-new-active-region 'lisp-indent-function 3)
 
 
-(defun fluiddb-setup-buffer (action)
-  (fluiddb-get-a-buffer)
-  (erase-buffer)
-  (goto-char (point-min))
-  (insert-string "Signed in as: ")
-  (fluiddb-with-new-active-region
-      (lambda (overlay)
-        (overlay-put overlay 'face 'underlined)
-        (overlay-put overlay 'action (list (function fluiddb-do-change-authentication) (current-buffer))))
-      ()
-      (if *fluiddb-credentials*
-          (insert-string (car *fluiddb-credentials*))
-        (insert-string "*None* (anonymous)")))
-  (newline)
-  (insert-string "____________________________________________________")
-  (newline))
-
-
-
-(defun fluiddb-do-change-authentication (&optional buffer)
-  (interactive)
-  (let ((name (read-string "User name (empty for anon access): " (car *fluiddb-credentials*) )))
-    (if (string-equal "" name)
-        (setf *fluiddb-credentials* nil)
-      (let ((password (read-passwd "Password: ")))
-        (setf *fluiddb-credentials* (cons name password))))))
-
-
-(defun fluiddb-browser-next-region ()
-  (interactive)
-  (let* ((current (point))
-         (next (loop for pos in fluiddb-active-regions
-                     for start = (marker-position (car pos))
-                     when (> start current)
-                     do (return start))))
-    (if next
-        (goto-char next)
-      (message "No next region"))))
-
-
-(defun fluiddb-browser-previous-region ()
-  (interactive)
-  (let* ((current (point))
-         (next (loop for pos in (reverse fluiddb-active-regions)
-                     for start = (marker-position (car pos))
-                     when (< start current)
-                     do (return start))))
-    (if next
-        (goto-char next)
-      (message "No previous region"))))
-
-
-
-(defun fluiddb-browser-view-at-point ()
-  (interactive)
-  (let ((action (get-char-property (point) 'view-action)))
-    (if action
-        (apply (car action) (cdr action))
-      (message "Nothing to view at point"))))
-
-(defun fluiddb-browser-action-at-point ()
-  (interactive)
-  (let ((action (get-char-property (point) 'action)))
-    (if action
-        (apply (car action) (cdr action))
-      (message "Nothing to do at point"))))
 
 (defun fluiddb-make-title-markup (overlay)
+  "Add markup for some title text to the given overlay"
   (overlay-put overlay 'face 'bold-italic)
   (overlay-put overlay 'help-echo "Title field describing this page"))
 
+
 (defun fluiddb-make-id-markup (overlay id)
+  "Add markup and actions for some id text to the given overlay"
   (overlay-put overlay 'help-echo "An id. Press 'RET' to browse to this id.")
   (overlay-put overlay 'face 'bold)
+  (overlay-put overlay 'fluiddb-id id)
   (overlay-put overlay 'action 
                (list (lambda (id) 
                        (fluiddb-browse-object id))
                      id)))
 
+
 (defun fluiddb-make-tag-markup (overlay tag)
+  "Add markup and actions for some tag text to the given overlay"
   (overlay-put overlay 'help-echo "A tag. Press 'RET' to browse to this tag.")
   (overlay-put overlay 'face 'bold)
+  (overlay-put overlay 'fluiddb-tag tag)
   (overlay-put overlay 'action 
                (list (lambda (tag)
                        (fluiddb-browse-tag tag))
                      tag)))
+
 
 (defun fluiddb-make-user-markup (overlay user-name)
   (overlay-put overlay 'help-echo "A user. Press 'RET' to browse to this user.")
@@ -306,15 +306,100 @@
 
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Navigation
+
+
+(defun fluiddb-browser-next-region ()
+  "Action to perform to move point to the beginning of the next active region (if there is one)"
+  (interactive)
+  (let* ((current (point))
+         (next (loop for pos in fluiddb-active-regions
+                     for start = (marker-position (car pos))
+                     when (> start current)
+                     do (return start))))
+    (if next
+        (goto-char next)
+      (message "No next region"))))
+
+
+(defun fluiddb-browser-previous-region ()
+  "Action to perform to move point to the beginning of the preceeding active region (if there is one)"
+  (interactive)
+  (let* ((current (point))
+         (next (loop for pos in (reverse fluiddb-active-regions)
+                     for start = (marker-position (car pos))
+                     when (< start current)
+                     do (return start))))
+    (if next
+        (goto-char next)
+      (message "No previous region"))))
+
+
 (defun fluiddb-browser-find-in-history (item)
   (loop for this on fluiddb-browse-objects
         and prev = nil then this
         when (eq (car this) item)
         do (return (values this (car prev)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Buffer presentation
+
+(defun fluiddb-setup-buffer (action)
+  "Initialise a new or old buffer to be ready for the actual filling command to add contents.
+This step *does* already add the common code of user authentication."
+  (fluiddb-get-a-buffer)
+  (erase-buffer)
+  (goto-char (point-min))
+  (insert-string "Signed in as: ")
+  (fluiddb-with-new-active-region
+      (lambda (overlay)
+        (overlay-put overlay 'face 'underlined)
+        (overlay-put overlay 'action (list (function fluiddb-do-change-authentication) (current-buffer))))
+      ()
+      (if *fluiddb-credentials*
+          (insert-string (car *fluiddb-credentials*))
+        (insert-string "*None* (anonymous)")))
+  (newline)
+  (insert-string "____________________________________________________")
+  (newline))
+
+
+(defun fluiddb-do-change-authentication (&optional buffer)
+  "Action to perform to change the user credentials to use when accessing the FluidDB."
+  (interactive)
+  (let ((name (read-string "User name (empty for anon access): " (car *fluiddb-credentials*) )))
+    (if (string-equal "" name)
+        (setf *fluiddb-credentials* nil)
+      (let ((password (read-passwd "Password: ")))
+        (setf *fluiddb-credentials* (cons name password))))))
+
+
+(defun fluiddb-browser-view-at-point ()
+  "Action to perform when user pressed 'v' on an active region.
+This looks up the actual action in the overlay."
+  (interactive)
+  (let ((action (get-char-property (point) 'view-action)))
+    (if action
+        (apply (car action) (cdr action))
+      (message "Nothing to view at point"))))
+
+
+(defun fluiddb-browser-action-at-point ()
+  "Action to perform when user pressed 'RET' on an active region.
+This looks up the actual action in the overlay."
+  (interactive)
+  (let ((action (get-char-property (point) 'action)))
+    (if action
+        (apply (car action) (cdr action))
+      (message "Nothing to do at point"))))
+
+
+
 (defun fluiddb-browser-reload ()
   (interactive)
   (fluiddb-show-this fluiddb-browse-current-object nil))
+
 
 (defun fluiddb-browser-add-tag-values (tag)
   (interactive "sTag to show: ")

@@ -46,6 +46,19 @@
 ;; Support functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun fluiddb-escape-string-for-uri (string)
+  "Escape the string to be usable in an URI (doing percent escaping of certain characters.
+
+Newer versions of url.el have the function
+browse-url-url-encode-chars for this but if we bring our own,
+this will work with Emacs 22 as well."
+  (with-output-to-string
+    (loop for char across string
+          do (princ (if (or (< char ? )
+                            (memq char (list ?+ ? ?& ??)))
+                        (format "%%%02x" char)
+                      (format "%c" char))))))
+
 (defun  fluiddb-send-request (method url-extra query-args body accept-value extra-headers)
   "The general purpose helper function to do the actual call to
 the FluidDB server"
@@ -66,7 +79,7 @@ the FluidDB server"
                           (if first "?" "&")
                           param
                           "="
-                          (browse-url-url-encode-chars value "[+ &?]")))))
+                          (fluiddb-escape-string-for-uri value)))))
       (let* ((*fluiddb-within-call* t)
              (url-request-method method)
              (url-http-attempt-keepalives nil)

@@ -51,13 +51,18 @@
 
 Newer versions of url.el have the function
 browse-url-url-encode-chars for this but if we bring our own,
-this will work with Emacs 22 as well."
+this will work with Emacs 22 as well.
+
+We escape everything except letters, digits and - . _ ~
+(c.f. section 2.3 of RFC 3986)."
   (with-output-to-string
     (loop for char across string
-          do (princ (if (or (< char ? )
-                            (memq char (list ?+ ? ?& ??)))
-                        (format "%%%02x" char)
-                      (format "%c" char))))))
+          do (princ (if (or (and (>= char ?a) (<= char ?z))
+                            (and (>= char ?A) (<= char ?Z))
+                            (and (>= char ?0) (<= char ?9))
+                            (memq char (list ?- ?. ?_ ?~)))
+                        (format "%c" char)
+                      (format "%%%02X" char))))))
 
 (defun  fluiddb-send-request (method url-extra query-args body accept-value extra-headers)
   "The general purpose helper function to do the actual call to

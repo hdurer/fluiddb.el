@@ -343,7 +343,7 @@ into buffer-local list for traversal."
         do (return (values this (car prev)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Buffer presentation
+;;; Buffer presentation and actions in the buffer
 
 (defun fluiddb-setup-buffer (action)
   "Initialise a new or old buffer to be ready for the actual filling command to add contents.
@@ -653,7 +653,7 @@ This looks up the actual action in the overlay."
           (insert-string "(press 't' to add object-tag values)")
           (setq fluiddb-buffer-id-markers (nreverse fluiddb-buffer-id-markers)))
       (insert-string
-       (format "Error performing query %s -- %s %s %s %s" 
+       (format "Error performing query %s -- %s %s %s" 
                query
                (third res) (fifth res) (sixth res))))))
 

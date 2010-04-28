@@ -279,14 +279,17 @@ into buffer-local list for traversal."
                                       (insert-string (format "Length: %s\n" (length value)))
                                       (cond 
                                        ((or (string-equal "image/png" mime-type)
-                                            (string-equal "image/gif" mime-type))
+                                            (string-equal "image/jpg" mime-type)
+                                            (string-equal "image/gif" mime-type)
+                                            (string-equal "image/tiff" mime-type)
+                                            (string-equal "image/xbm" mime-type)
+                                            (string-equal "image/xpm" mime-type))
                                         (insert-string "Image:  ")
                                         (fluiddb-with-new-active-region
                                             (lambda (overlay value mime-type)
                                               (overlay-put overlay 'display 
                                                            (create-image value 
-                                                                         (intern (second 
-                                                                                  (split-string mime-type "/")))
+                                                                         nil ;; detect type
                                                                          t)))
                                             (list value mime-type)
                                             (insert-string value)))

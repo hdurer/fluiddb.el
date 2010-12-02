@@ -495,7 +495,7 @@ This looks up the actual action in the overlay."
  
 (defun fluiddb-show-tag (full-tag)
   (multiple-value-bind (ns tag) (fluiddb-split-name full-tag)
-    (let ((res (fluiddb-get-tag ns tag)))
+    (let ((res (fluiddb-get-tag full-tag)))
       (if (first res)
         (progn
           ;; ok result

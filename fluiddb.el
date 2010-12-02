@@ -243,7 +243,23 @@ Policy should be either open or closed."
     "Check if the object with the given id has the specified tag value set.
 Returns nil or the mime type of the value."
     (let ((response (fluiddb-send-request "HEAD"
-                                          (concat "objects/" id "/" (fluiddb-url-format-namespace-or-tag tag))
+                                          (concat "objects/" id "/"
+                                                  (fluiddb-url-format-namespace-or-tag tag))
+                                          nil
+                                          nil
+                                          "*/*"
+                                          nil)))
+      (when (first response)
+        ;; response is (status-ok-p content status content-type)
+        (or (fourth response) t))))
+
+
+(defun fluiddb-object-about-tag-has-value-p (about tag)
+    "Check if the object with the given about tag has the specified tag value set.
+Returns nil or the mime type of the value."
+    (let ((response (fluiddb-send-request "HEAD"
+                                          (concat "about/" (fluiddb-escape-string-for-uri about) "/"
+                                                  (fluiddb-url-format-namespace-or-tag tag))
                                           nil
                                           nil
                                           "*/*"
@@ -267,10 +283,35 @@ or will be JSON encoded and passed as a fluiddb primitive type."
                         `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
 
 
+(defun fluiddb-set-object-about-tag-value (about tag contents &optional content-type)
+  "Set the specified tag value on the object with the given about tag.
+Content is either presumed to be pre-formatted (if content-type is given)
+or will be JSON encoded and passed as a fluiddb primitive type."
+  (fluiddb-send-request "PUT"
+                        (concat "about/" (fluiddb-escape-string-for-uri about) "/" 
+                                (fluiddb-url-format-namespace-or-tag tag))
+                        nil
+                        (if content-type
+                            contents
+                          (json-encode contents))
+                        "*/*"
+                        `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
+
+
 (defun fluiddb-delete-object-tag-value (id tag)
   "Delete the specified tag value on the object with the given id"
   (fluiddb-send-request "DELETE"
                         (concat "object/" id "/" (fluiddb-url-format-namespace-or-tag tag))
+                        nil
+                        nil
+                        "*/*"
+                        nil))
+
+(defun fluiddb-delete-object-about-tag-value (about tag)
+  "Delete the specified tag value on the object with the given about tag"
+  (fluiddb-send-request "DELETE"
+                        (concat "about/" (fluiddb-escape-string-for-uri about) "/"
+                                (fluiddb-url-format-namespace-or-tag tag))
                         nil
                         nil
                         "*/*"

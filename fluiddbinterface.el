@@ -1,6 +1,6 @@
 ;;; fluiddbinterface.el --- Code to create an Emacs interface to FluidDB
 ;;
-;; Copyright (C) 2009 Holger Durer
+;; Copyright (C) 2009, 2010 Holger Durer
 ;;
 ;;
 ;; This file is free software; you can redistribute it and/or modify
@@ -340,6 +340,7 @@ into buffer-local list for traversal."
 
 
 (defun fluiddb-browser-find-in-history (item)
+  "Helper function to look up things in the browser history."
   (loop for this on fluiddb-browse-objects
         and prev = nil then this
         when (eq (car this) item)
@@ -400,6 +401,7 @@ This looks up the actual action in the overlay."
 
 
 (defun fluiddb-browser-reload ()
+  "Reload the currently browsed object."
   (interactive)
   (fluiddb-show-this fluiddb-browse-current-object nil))
 
@@ -433,6 +435,7 @@ This looks up the actual action in the overlay."
     (message "Nothing here to show tags on!")))
 
 (defun fluiddb-browser-backward-in-history ()
+  "Go backwards in the browsing history"
   (interactive)
   (multiple-value-bind (this prev) (fluiddb-browser-find-in-history fluiddb-browse-current-object)
     (if (cadr this)
@@ -442,6 +445,7 @@ This looks up the actual action in the overlay."
       (message "Nothing to go back to"))))
 
 (defun fluiddb-browser-forward-in-history ()
+  "Go forwards in the browsing history"
   (interactive)
   (multiple-value-bind (this prev) (fluiddb-browser-find-in-history fluiddb-browse-current-object)
     (if prev

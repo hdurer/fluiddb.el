@@ -1,6 +1,6 @@
 ;;; fluiddb.el --- Code to work with FluidDB
 ;;
-;; Copyright (C) 2009 Holger Durer
+;; Copyright (C) 2009, 2010 Holger Durer
 ;;
 ;;
 ;; This file is free software; you can redistribute it and/or modify
@@ -28,15 +28,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar *fluiddb-credentials* nil
-  "Nil (use anonymous access) or a cons of user-name and password")
+  "Nil (use anonymous access) or a cons of user-name and password strings")
 
-(defvar *fluiddb-server* "sandbox.fluidinfo.com"
+(defvar *fluiddb-server* "fluiddb.fluidinfo.com"
   "The server to use for calls -- either the main instance or sandbox")
 
 
 (defvar *fluiddb-within-call* nil
   "Helper variable to indicate if we are withing a fluiddb call and thus won't want the authentication mechanisms to kick in")
 
+
+;; The following disables the interactive request for user name and
+;; password should an API call encounter a permission-denied response.
+;; This API is meant to be usable without constant asking for username
+;; and password.
 (defadvice url-http-handle-authentication (around fluiddb-fix)
   (unless *fluiddb-within-call*
       ad-do-it))
@@ -63,6 +68,7 @@ We escape everything except letters, digits and - . _ ~
                             (memq char (list ?- ?. ?_ ?~)))
                         (format "%c" char)
                       (format "%%%02X" char))))))
+
 
 (defun  fluiddb-send-request (method url-extra query-args body accept-value extra-headers)
   "The general purpose helper function to do the actual call to
@@ -126,6 +132,7 @@ the FluidDB server"
       t
     :json-false))
 
+
 (defun fluiddb-something-to-string (something)
   "Do sensible conversion to a string"
   (typecase something
@@ -137,6 +144,8 @@ the FluidDB server"
 
 
 (defun fluiddb-make-permission-object (policy exceptions)
+  "Return a JSON encoded string representing the passed permission.
+Policy should be either open or closed."
   (json-encode-alist
    `(("policy" . ,(fluiddb-something-to-string policy))
      ("exceptions" . ,(mapcar 'fluiddb-something-to-string exceptions)))))
@@ -147,8 +156,9 @@ the FluidDB server"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun fluiddb-get-user (user-name)
+  "Retrieve information about the user with the given name"
   (fluiddb-send-request "GET"
-                        (concat "users/" user-name)
+                        (concat "users/" (fluiddb-escape-string-for-uri user-name))
                         nil
                         nil
                         "application/json"
@@ -161,6 +171,7 @@ the FluidDB server"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun fluiddb-get-object (guid)
+  "Retrieve an object by its id"
   (fluiddb-send-request "GET"
                         (concat "objects/" guid)
                         '(("showAbout" . "True"))
@@ -168,7 +179,9 @@ the FluidDB server"
                         "application/json"
                         nil))
 
+
 (defun fluiddb-query-objects (query)
+  "Perform a query for all object matching"
   (fluiddb-send-request "GET"
                         "objects"
                         `(("query" . ,query))
@@ -176,7 +189,9 @@ the FluidDB server"
                         "application/json"
                         nil))
 
+
 (defun fluiddb-create-object (&optional about)
+  "Create a new object (anonymous if no about is specified)"
   (fluiddb-send-request "POST"
                         "objects"
                         nil
@@ -185,7 +200,9 @@ the FluidDB server"
                         "application/json"
                         '(("Content-Type" . "application/json"))))
 
+
 (defun fluiddb-get-object-tag-value (id tag &optional accept)
+  "Retrieve the object's tag value for the object with the given id"
   (fluiddb-send-request "GET"
                         (concat "objects/" id "/" tag)
                         nil
@@ -193,7 +210,24 @@ the FluidDB server"
                         (or accept "application/vnd.fluiddb.value+json")                          
                         nil))
 
+(defun fluiddb-object-tag-has-value-p (id tag)
+    "Check if the object with the given id has the specified tag value set.
+Returns nil or the mime type of the value."
+    (let ((response (fluiddb-send-request "HEAD"
+                                          (concat "objects/" id "/" tag)
+                                          nil
+                                          nil
+                                          "*/*"
+                                          nil)))
+      (when (first response)
+        ;; response is (status-ok-p content status content-type)
+        (or (fourth response) t))))
+
+
 (defun fluiddb-set-object-tag-value (id tag contents &optional content-type)
+  "Set the specified tag value on the object with the given id.
+Content is either presumed to be pre-formatted (if content-type is given)
+or will be JSON encoded and passed as a fluiddb primitive type."
   (fluiddb-send-request "PUT"
                         (concat "objects/" id "/" tag)
                         nil
@@ -203,6 +237,14 @@ the FluidDB server"
                         "*/*"
                         `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
 
+(defun fluiddb-delete-object-tag-value (id tag)
+  "Delete the specified tag value on the object with the given id"
+  (fluiddb-send-request "DELETE"
+                        (concat "object/" id "/" tag)
+                        nil
+                        nil
+                        "*/*"
+                        nil))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -210,6 +252,7 @@ the FluidDB server"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun fluiddb-get-namespace (ns)
+  "Retrieve information about the given namespace"
   (fluiddb-send-request "GET"
                         (concat "namespaces/" ns)
                         '(("returnDescription" . "True")
@@ -219,7 +262,9 @@ the FluidDB server"
                         "application/json"
                         nil))
 
+
 (defun fluiddb-create-namespace (ns name description)
+  "Create a new sub-namespace within the passed namespace"
   (fluiddb-send-request "POST"
                         (concat "namespaces/" ns)
                         nil
@@ -229,7 +274,9 @@ the FluidDB server"
                         "application/json"
                         '(("Content-Type" . "application/json"))))
 
+
 (defun fluiddb-change-namespace (ns new-description)
+  "Change the description of the given namespace"
   (fluiddb-send-request "PUT"
                         (concat "namespaces/" ns)
                         nil
@@ -237,7 +284,9 @@ the FluidDB server"
                         "application/json"
                         '(("Content-Type" . "application/json"))))
 
+
 (defun fluiddb-delete-namespace (ns)
+  "Delete the given namespace"
   (fluiddb-send-request "DELETE"
                         (concat "namespaces/" ns)
                         nil
@@ -250,6 +299,8 @@ the FluidDB server"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun fluiddb-get-namespace-permissions (namespace action)
+  "Retrieve the permission information for the given namespace and action.
+Action can be one of create, update, delete, list, control."
   (fluiddb-send-request "GET"
                         (concat "permissions/namespaces/" namespace)
                         `(("action" . ,(fluiddb-something-to-string action)))
@@ -257,7 +308,11 @@ the FluidDB server"
                         "application/json"
                         nil))
 
+
 (defun fluiddb-set-namespace-permissions (namespace action policy exceptions)
+  "Set the permission information for the given namespace and action.
+Action can be one of create, update, delete, list, control.
+Policy can be either open or closed."
   (fluiddb-send-request "PUT"
                         (concat "permissions/namespaces/" namespace)
                         `(("action" . ,(fluiddb-something-to-string action)))
@@ -267,14 +322,20 @@ the FluidDB server"
 
 
 (defun fluiddb-get-tag-permissions (tag action)
+  "Retrieve the permission information for the given tag and action.
+Action can be one of update, delete, control."
   (fluiddb-send-request "GET"
                         (concat "permissions/tags/" tag)
                         `(("action" . ,(fluiddb-something-to-string action)))
                         nil
                         "application/json"
                         nil))
+
 
 (defun fluiddb-set-tag-permissions (tag action policy exceptions)
+  "Set the permission information for the given tag and action.
+Action can be one of update, delete, control.
+Policy can be either open or closed."
   (fluiddb-send-request "PUT"
                         (concat "permissions/tags/" tag)
                         `(("action" . ,(fluiddb-something-to-string action)))
@@ -282,7 +343,10 @@ the FluidDB server"
                         "application/json"
                         '(("Content-Type" . "application/json"))))
 
+
 (defun fluiddb-get-tag-value-permissions (tag action)
+  "Retrieve the permission information for the given tag value and action.
+Action can be one of create, read, delete, control."
   (fluiddb-send-request "GET"
                         (concat "permissions/tag-values/" tag-value)
                         `(("action" . ,(fluiddb-something-to-string action)))
@@ -290,15 +354,17 @@ the FluidDB server"
                         "application/json"
                         nil))
 
+
 (defun fluiddb-set-tag-value-permissions (tag action policy exceptions)
+  "Set the permission information for the given tag value and action.
+Action can be one of create, read, delete, control.
+Policy can be either open or closed."
   (fluiddb-send-request "PUT"
                         (concat "permissions/tag-values/" tag-value)
                         `(("action" . ,(fluiddb-something-to-string action)))
                         (fluiddb-make-permission-object policy exceptions)
                         "application/json"
                         '(("Content-Type" . "application/json"))))
-
-
 
 
 
@@ -307,6 +373,11 @@ the FluidDB server"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun fluiddb-get-policy (user-name category action)
+  "Retrieve the user's default policy for the given category and action.
+Possible values for categorie/actions are:
+- namespaces: create, update, delete, and list.
+- tags: update and delete.
+- tag-values: create, read, and delete."
   (fluiddb-send-request "GET"
                         (concat "policies/" 
                                 user-name "/" 
@@ -317,7 +388,14 @@ the FluidDB server"
                         "application/json"
                         nil))
 
+
 (defun fluiddb-set-policy (user-name category action policy exceptions)
+  "Set the user's default policy for the given category and action.
+Possible values for categorie/actions are:
+- namespaces: create, update, delete, and list.
+- tags: update and delete.
+- tag-values: create, read, and delete.
+Policy can be either open or closed."
   (fluiddb-send-request "PUT"
                         (concat "policies/" 
                                 user-name "/" 
@@ -334,6 +412,7 @@ the FluidDB server"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun fluiddb-create-tag (ns name description indexed)
+  "Create a new tag withing the given namespace"
   (fluiddb-send-request "POST"
                         (concat "tags/" ns)
                         nil
@@ -345,6 +424,7 @@ the FluidDB server"
 
 
 (defun fluiddb-get-tag (ns tag)
+  "Retrieve information about the given tag"
   (fluiddb-send-request "GET"
                         (concat "tags/" ns "/" tag)
                         '(("returnDescription" . "True"))
@@ -354,6 +434,7 @@ the FluidDB server"
 
 
 (defun fluiddb-change-tag (ns tag new-description)
+  "Change the description of the given tag"
   (fluiddb-send-request "PUT"
                         (concat "tags/" ns "/" tag)
                         nil
@@ -363,6 +444,7 @@ the FluidDB server"
 
 
 (defun fluiddb-delete-tag (ns tag-description)
+  "Delete the given tag"
   (fluiddb-send-request "DELETE"
                         (concat "tags/" ns "/" tag)
                         nil

@@ -1,6 +1,6 @@
 ;; fluiddbutils.el --- Some utility routines based on fluiddb I found useful
 ;;
-;; Copyright (C) 2009 Holger Durer
+;; Copyright (C) 2009, 2010 Holger Durer
 ;;
 ;;
 ;; This file is free software; you can redistribute it and/or modify

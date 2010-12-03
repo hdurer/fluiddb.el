@@ -206,6 +206,43 @@ Policy should be either open or closed."
                         nil))
 
 
+(defun fluiddb-query-objects-tag-values (query tags-list)
+  "Perform a query and retrieve all objects matching plus the specified tag values on them"
+  (fluiddb-send-request "GET"
+                        "values"
+                        (cons (cons "query"  query)
+                              (loop for tag in tags-list
+                                    collect (cons "tag" tag)))
+                        nil
+                        "application/json"
+                        nil))
+
+
+(defun fluiddb-set-objects-tag-values (query tags-values-list)
+  "Perform a query and set the specified tag values on the matching objects"
+  (fluiddb-send-request "PUT"
+                        "values"
+                        `(("query" . ,query))
+                        (json-encode-alist
+                         (loop for (tag . value) in tags-values-list
+                               collect (cons tag 
+                                             `(("value" . ,value)))))
+                        "application/json"
+                        '(("Content-Type" . "application/json"))))
+
+
+(defun fluiddb-delete-objects-tag-values (query tags-list)
+  "Perform a query and delete the specified tag values on the matching objects"
+  (fluiddb-send-request "DELETE"
+                        "values"
+                        (cons (cons "query"  query)
+                              (loop for tag in tags-list
+                                    collect (cons "tag" tag)))
+                        nil
+                        "*/*"
+                        nil))
+
+
 (defun fluiddb-create-object (&optional about)
   "Create a new object (anonymous if no about is specified)"
   (fluiddb-send-request "POST"

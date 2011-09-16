@@ -33,6 +33,8 @@
 (defvar *fluiddb-server* "fluiddb.fluidinfo.com"
   "The server to use for calls -- either the main instance or sandbox")
 
+(defvar *fluiddb-use-https* nil
+  "A flag whether to use https or just http")
 
 (defvar *fluiddb-within-call* nil
   "Helper variable to indicate if we are withing a fluiddb call and thus won't want the authentication mechanisms to kick in")
@@ -105,7 +107,7 @@ the FluidDB server"
              (url-extensions-header nil)
              (url-request-data body)
              (url-request-extra-headers extra-headers)
-             (url (concat "http://" *fluiddb-server* "/" url-extra))
+             (url (concat (if *fluiddb-use-https* "https" "http") "://" *fluiddb-server* "/" url-extra))
              (buffer (url-retrieve-synchronously url))
              result)
         (switch-to-buffer buffer)

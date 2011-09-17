@@ -94,7 +94,7 @@ the Fluidinfo server"
                         (concat "Basic "
                                 (base64-encode-string
                                  (concat (car credentials) ":" (cdr credentials)))))
-                extra-headers)))
+                  extra-headers)))
       (when query-args
         (loop 
          for first = t then nil
@@ -172,11 +172,11 @@ Policy should be either open or closed."
 (defun fluidinfo-get-user (user-name)
   "Retrieve information about the user with the given name"
   (fluidinfo-send-request "GET"
-                        (concat "users/" (fluidinfo-escape-string-for-uri user-name))
-                        nil
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "users/" (fluidinfo-escape-string-for-uri user-name))
+                          nil
+                          nil
+                          "application/json"
+                          nil))
 
 
 
@@ -187,131 +187,131 @@ Policy should be either open or closed."
 (defun fluidinfo-get-object (guid)
   "Retrieve an object by its id"
   (fluidinfo-send-request "GET"
-                        (concat "objects/" guid)
-                        '(("showAbout" . "True"))
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "objects/" guid)
+                          '(("showAbout" . "True"))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-get-object-about (about)
   "Retrieve an object by its about tag"
   (fluidinfo-send-request "GET"
-                        (concat "about/" (fluidinfo-escape-string-for-uri about))
-                        nil
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "about/" (fluidinfo-escape-string-for-uri about))
+                          nil
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-query-objects (query)
   "Perform a query for all object matching"
   (fluidinfo-send-request "GET"
-                        "objects"
-                        `(("query" . ,query))
-                        nil
-                        "application/json"
-                        nil))
+                          "objects"
+                          `(("query" . ,query))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-query-objects-tag-values (query tags-list)
   "Perform a query and retrieve all objects matching plus the specified tag values on them"
   (fluidinfo-send-request "GET"
-                        "values"
-                        (cons (cons "query"  query)
-                              (loop for tag in tags-list
-                                    collect (cons "tag" tag)))
-                        nil
-                        "application/json"
-                        nil))
+                          "values"
+                          (cons (cons "query"  query)
+                                (loop for tag in tags-list
+                                      collect (cons "tag" tag)))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-set-objects-tag-values (query tags-values-list)
   "Perform a query and set the specified tag values on the matching objects"
   (fluidinfo-send-request "PUT"
-                        "values"
-                        `(("query" . ,query))
-                        (json-encode-alist
-                         (loop for (tag . value) in tags-values-list
-                               collect (cons tag 
-                                             `(("value" . ,value)))))
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          "values"
+                          `(("query" . ,query))
+                          (json-encode-alist
+                           (loop for (tag . value) in tags-values-list
+                                 collect (cons tag 
+                                               `(("value" . ,value)))))
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-delete-objects-tag-values (query tags-list)
   "Perform a query and delete the specified tag values on the matching objects"
   (fluidinfo-send-request "DELETE"
-                        "values"
-                        (cons (cons "query"  query)
-                              (loop for tag in tags-list
-                                    collect (cons "tag" tag)))
-                        nil
-                        "*/*"
-                        nil))
+                          "values"
+                          (cons (cons "query"  query)
+                                (loop for tag in tags-list
+                                      collect (cons "tag" tag)))
+                          nil
+                          "*/*"
+                          nil))
 
 
 (defun fluidinfo-create-object (&optional about)
   "Create a new object (anonymous if no about is specified)"
   (fluidinfo-send-request "POST"
-                        "objects"
-                        nil
-                        (when about
-                          (json-encode-alist `(("about" . ,about))))
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          "objects"
+                          nil
+                          (when about
+                            (json-encode-alist `(("about" . ,about))))
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-get-object-tag-value (id tag &optional accept)
   "Retrieve the object's tag value for the object with the given id"
   (fluidinfo-send-request "GET"
-                        (concat "objects/" id "/" (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        nil
-                        (or accept "application/vnd.fluiddb.value+json")                          
-                        nil))
+                          (concat "objects/" id "/" (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          nil
+                          (or accept "application/vnd.fluiddb.value+json")                          
+                          nil))
 
 
 (defun fluidinfo-get-object-about-tag-value (about tag &optional accept)
   "Retrieve the object's tag value for the object with the given about tag"
   (fluidinfo-send-request "GET"
-                        (concat "about/" (fluidinfo-escape-string-for-uri about)
-                                "/" 
-                                (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        nil
-                        (or accept "application/vnd.fluiddb.value+json")                          
-                        nil))
+                          (concat "about/" (fluidinfo-escape-string-for-uri about)
+                                  "/" 
+                                  (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          nil
+                          (or accept "application/vnd.fluiddb.value+json")                          
+                          nil))
 
 
 (defun fluidinfo-object-tag-has-value-p (id tag)
-    "Check if the object with the given id has the specified tag value set.
+  "Check if the object with the given id has the specified tag value set.
 Returns nil or the mime type of the value."
-    (let ((response (fluidinfo-send-request "HEAD"
+  (let ((response (fluidinfo-send-request "HEAD"
                                           (concat "objects/" id "/"
                                                   (fluidinfo-url-format-namespace-or-tag tag))
                                           nil
                                           nil
                                           "*/*"
                                           nil)))
-      (when (first response)
-        ;; response is (status-ok-p content status content-type)
-        (or (fourth response) t))))
+    (when (first response)
+      ;; response is (status-ok-p content status content-type)
+      (or (fourth response) t))))
 
 
 (defun fluidinfo-object-about-tag-has-value-p (about tag)
-    "Check if the object with the given about tag has the specified tag value set.
+  "Check if the object with the given about tag has the specified tag value set.
 Returns nil or the mime type of the value."
-    (let ((response (fluidinfo-send-request "HEAD"
+  (let ((response (fluidinfo-send-request "HEAD"
                                           (concat "about/" (fluidinfo-escape-string-for-uri about) "/"
                                                   (fluidinfo-url-format-namespace-or-tag tag))
                                           nil
                                           nil
                                           "*/*"
                                           nil)))
-      (when (first response)
-        ;; response is (status-ok-p content status content-type)
-        (or (fourth response) t))))
+    (when (first response)
+      ;; response is (status-ok-p content status content-type)
+      (or (fourth response) t))))
 
 
 (defun fluidinfo-set-object-tag-value (id tag contents &optional content-type)
@@ -319,13 +319,13 @@ Returns nil or the mime type of the value."
 Content is either presumed to be pre-formatted (if content-type is given)
 or will be JSON encoded and passed as a fluidinfo primitive type."
   (fluidinfo-send-request "PUT"
-                        (concat "objects/" id "/" (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        (if content-type
-                            contents
-                          (json-encode contents))
-                        "*/*"
-                        `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
+                          (concat "objects/" id "/" (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          (if content-type
+                              contents
+                            (json-encode contents))
+                          "*/*"
+                          `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
 
 
 (defun fluidinfo-set-object-about-tag-value (about tag contents &optional content-type)
@@ -333,34 +333,34 @@ or will be JSON encoded and passed as a fluidinfo primitive type."
 Content is either presumed to be pre-formatted (if content-type is given)
 or will be JSON encoded and passed as a fluidinfo primitive type."
   (fluidinfo-send-request "PUT"
-                        (concat "about/" (fluidinfo-escape-string-for-uri about) "/" 
-                                (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        (if content-type
-                            contents
-                          (json-encode contents))
-                        "*/*"
-                        `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
+                          (concat "about/" (fluidinfo-escape-string-for-uri about) "/" 
+                                  (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          (if content-type
+                              contents
+                            (json-encode contents))
+                          "*/*"
+                          `(("Content-type" . ,(or content-type "application/vnd.fluiddb.value+json")))))
 
 
 (defun fluidinfo-delete-object-tag-value (id tag)
   "Delete the specified tag value on the object with the given id"
   (fluidinfo-send-request "DELETE"
-                        (concat "object/" id "/" (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        nil
-                        "*/*"
-                        nil))
+                          (concat "object/" id "/" (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          nil
+                          "*/*"
+                          nil))
 
 (defun fluidinfo-delete-object-about-tag-value (about tag)
   "Delete the specified tag value on the object with the given about tag"
   (fluidinfo-send-request "DELETE"
-                        (concat "about/" (fluidinfo-escape-string-for-uri about) "/"
-                                (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        nil
-                        "*/*"
-                        nil))
+                          (concat "about/" (fluidinfo-escape-string-for-uri about) "/"
+                                  (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          nil
+                          "*/*"
+                          nil))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -370,45 +370,45 @@ or will be JSON encoded and passed as a fluidinfo primitive type."
 (defun fluidinfo-get-namespace (namespace)
   "Retrieve information about the given namespace"
   (fluidinfo-send-request "GET"
-                        (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        '(("returnDescription" . "True")
-                          ("returnNamespaces" . "True")
-                          ("returnTags" . "True"))
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          '(("returnDescription" . "True")
+                            ("returnNamespaces" . "True")
+                            ("returnTags" . "True"))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-create-namespace (namespace name description)
   "Create a new sub-namespace within the passed namespace"
   (fluidinfo-send-request "POST"
-                        (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        nil
-                        (json-encode-alist `(("description" . ,description)
-                                             ("name" . ,name)))
+                          (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          nil
+                          (json-encode-alist `(("description" . ,description)
+                                               ("name" . ,name)))
 
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-change-namespace (namespace new-description)
   "Change the description of the given namespace"
   (fluidinfo-send-request "PUT"
-                        (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        nil
-                        (json-encode-alist `(("description" . ,new-description)))
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          nil
+                          (json-encode-alist `(("description" . ,new-description)))
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-delete-namespace (namespace)
   "Delete the given namespace"
   (fluidinfo-send-request "DELETE"
-                        (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        nil
-                        nil
-                        "*/*"
-                        nil))
+                          (concat "namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          nil
+                          nil
+                          "*/*"
+                          nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Permissions
@@ -418,11 +418,11 @@ or will be JSON encoded and passed as a fluidinfo primitive type."
   "Retrieve the permission information for the given namespace and action.
 Action can be one of create, update, delete, list, control."
   (fluidinfo-send-request "GET"
-                        (concat "permissions/namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        `(("action" . ,(fluidinfo-something-to-string action)))
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "permissions/namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          `(("action" . ,(fluidinfo-something-to-string action)))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-set-namespace-permissions (namespace action policy exceptions)
@@ -430,22 +430,22 @@ Action can be one of create, update, delete, list, control."
 Action can be one of create, update, delete, list, control.
 Policy can be either open or closed."
   (fluidinfo-send-request "PUT"
-                        (concat "permissions/namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        `(("action" . ,(fluidinfo-something-to-string action)))
-                        (fluidinfo-make-permission-object policy exceptions)
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "permissions/namespaces/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          `(("action" . ,(fluidinfo-something-to-string action)))
+                          (fluidinfo-make-permission-object policy exceptions)
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-get-tag-permissions (tag action)
   "Retrieve the permission information for the given tag and action.
 Action can be one of update, delete, control."
   (fluidinfo-send-request "GET"
-                        (concat "permissions/tags/" (fluidinfo-url-format-namespace-or-tag tag))
-                        `(("action" . ,(fluidinfo-something-to-string action)))
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "permissions/tags/" (fluidinfo-url-format-namespace-or-tag tag))
+                          `(("action" . ,(fluidinfo-something-to-string action)))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-set-tag-permissions (tag action policy exceptions)
@@ -453,22 +453,22 @@ Action can be one of update, delete, control."
 Action can be one of update, delete, control.
 Policy can be either open or closed."
   (fluidinfo-send-request "PUT"
-                        (concat "permissions/tags/" (fluidinfo-url-format-namespace-or-tag tag))
-                        `(("action" . ,(fluidinfo-something-to-string action)))
-                        (fluidinfo-make-permission-object policy exceptions)
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "permissions/tags/" (fluidinfo-url-format-namespace-or-tag tag))
+                          `(("action" . ,(fluidinfo-something-to-string action)))
+                          (fluidinfo-make-permission-object policy exceptions)
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-get-tag-value-permissions (tag action)
   "Retrieve the permission information for the given tag value and action.
 Action can be one of create, read, delete, control."
   (fluidinfo-send-request "GET"
-                        (concat "permissions/tag-values/" (fluidinfo-url-format-namespace-or-tag tag))
-                        `(("action" . ,(fluidinfo-something-to-string action)))
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "permissions/tag-values/" (fluidinfo-url-format-namespace-or-tag tag))
+                          `(("action" . ,(fluidinfo-something-to-string action)))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-set-tag-value-permissions (tag action policy exceptions)
@@ -476,11 +476,11 @@ Action can be one of create, read, delete, control."
 Action can be one of create, read, delete, control.
 Policy can be either open or closed."
   (fluidinfo-send-request "PUT"
-                        (concat "permissions/tag-values/" (fluidinfo-url-format-namespace-or-tag tag))
-                        `(("action" . ,(fluidinfo-something-to-string action)))
-                        (fluidinfo-make-permission-object policy exceptions)
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "permissions/tag-values/" (fluidinfo-url-format-namespace-or-tag tag))
+                          `(("action" . ,(fluidinfo-something-to-string action)))
+                          (fluidinfo-make-permission-object policy exceptions)
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 
@@ -495,14 +495,14 @@ Possible values for categorie/actions are:
 - tags: update and delete.
 - tag-values: create, read, and delete."
   (fluidinfo-send-request "GET"
-                        (concat "policies/" 
-                                (fluidinfo-escape-string-for-uri user-name) "/" 
-                                (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string category)) "/"
-                                (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string action)))
-                        nil
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "policies/" 
+                                  (fluidinfo-escape-string-for-uri user-name) "/" 
+                                  (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string category)) "/"
+                                  (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string action)))
+                          nil
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-set-policy (user-name category action policy exceptions)
@@ -513,14 +513,14 @@ Possible values for categorie/actions are:
 - tag-values: create, read, and delete.
 Policy can be either open or closed."
   (fluidinfo-send-request "PUT"
-                        (concat "policies/" 
-                                (fluidinfo-escape-string-for-uri user-name) "/" 
-                                (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string category)) "/"
-                                (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string action)))
-                        nil
-                        (fluidinfo-make-permission-object policy exceptions)
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "policies/" 
+                                  (fluidinfo-escape-string-for-uri user-name) "/" 
+                                  (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string category)) "/"
+                                  (fluidinfo-escape-string-for-uri (fluidinfo-something-to-string action)))
+                          nil
+                          (fluidinfo-make-permission-object policy exceptions)
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -530,43 +530,43 @@ Policy can be either open or closed."
 (defun fluidinfo-create-tag (namespace name description indexed)
   "Create a new tag withing the given namespace"
   (fluidinfo-send-request "POST"
-                        (concat "tags/" (fluidinfo-url-format-namespace-or-tag namespace))
-                        nil
-                        (json-encode-alist `(("description" . ,description)
-                                             ("name" . ,name)
-                                             ("indexed" . ,(fluidinfo-bool-to-json-bool indexed))))
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "tags/" (fluidinfo-url-format-namespace-or-tag namespace))
+                          nil
+                          (json-encode-alist `(("description" . ,description)
+                                               ("name" . ,name)
+                                               ("indexed" . ,(fluidinfo-bool-to-json-bool indexed))))
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-get-tag (tag)
   "Retrieve information about the given tag"
   (fluidinfo-send-request "GET"
-                        (concat "tags/" (fluidinfo-url-format-namespace-or-tag tag))
-                        '(("returnDescription" . "True"))
-                        nil
-                        "application/json"
-                        nil))
+                          (concat "tags/" (fluidinfo-url-format-namespace-or-tag tag))
+                          '(("returnDescription" . "True"))
+                          nil
+                          "application/json"
+                          nil))
 
 
 (defun fluidinfo-change-tag (tag new-description)
   "Change the description of the given tag"
   (fluidinfo-send-request "PUT"
-                        (concat "tags/" (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        (json-encode-alist `(("description" . ,new-description)))
-                        "application/json"
-                        '(("Content-Type" . "application/json"))))
+                          (concat "tags/" (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          (json-encode-alist `(("description" . ,new-description)))
+                          "application/json"
+                          '(("Content-Type" . "application/json"))))
 
 
 (defun fluidinfo-delete-tag (tag)
   "Delete the given tag"
   (fluidinfo-send-request "DELETE"
-                        (concat "tags/" (fluidinfo-url-format-namespace-or-tag tag))
-                        nil
-                        nil
-                        "*/*"
-                        nil))
+                          (concat "tags/" (fluidinfo-url-format-namespace-or-tag tag))
+                          nil
+                          nil
+                          "*/*"
+                          nil))
 
 
 (provide 'fluidinfo)

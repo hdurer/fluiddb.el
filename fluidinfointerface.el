@@ -487,7 +487,7 @@ This looks up the actual action in the overlay."
                       (insert-string tag-name))
                   (newline)))))
       (insert-string
-       (format "Error getting object %s -- %s %s %s %s" 
+       (format "Error getting object %s -- %s %s %s" 
                guid
                (third res) (fifth res) (sixth res))))))
 
@@ -526,14 +526,14 @@ This looks up the actual action in the overlay."
                 (insert-string (format "%s" description)))
             (newline)
             (insert-string (format "  Is indexed:  %s" (if indexed "Yes" "No")))
-            (newline)))
+            (newline)
             (insert-string "  Belongs to:  ")
             (fluidinfo-with-new-active-region (function fluidinfo-make-user-markup)
                 (list user)
                 (insert-string (format "%s" user)))
-            (newline)
+            (newline)))
         (insert-string
-         (format "Error getting tag %s -- %s %s %s %s" 
+         (format "Error getting tag %s -- %s %s %s" 
                  full-tag
                  (third res) (fifth res) (sixth res)))))))
 
@@ -554,8 +554,8 @@ This looks up the actual action in the overlay."
             (newline)
             (insert-string "  User's namespace: ")
             (fluidinfo-with-new-active-region (function fluidinfo-make-ns-markup)
-                (list name)
-                (insert-string (format "%s" name)))
+                (list (downcase name))
+                (insert-string (format "%s" (downcase name))))
             (newline)))
         (insert-string
          (format "Error getting user %s -- %s %s %s"
@@ -627,7 +627,7 @@ This looks up the actual action in the overlay."
                            (insert-string tag))
                        (newline)))))
         (insert-string
-         (format "Error getting namespace %s -- %s %s %s %s" 
+         (format "Error getting namespace %s -- %s %s %s" 
                  ns
                  (third res) (fifth res) (sixth res)))))))
 

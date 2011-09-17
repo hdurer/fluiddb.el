@@ -37,7 +37,7 @@
   "A flag whether to use https or just http")
 
 (defvar *fluidinfo-within-call* nil
-  "Helper variable to indicate if we are withing a fluidinfo call and thus won't want the authentication mechanisms to kick in")
+  "Helper variable to indicate if we are within a fluidinfo call and thus won't want the authentication mechanisms to kick in")
 
 
 ;; The following disables the interactive request for user name and
@@ -78,7 +78,7 @@ We escape everything except letters, digits and those in verbatim-chars
 This is similar to fluidinfo-escape-string-for-uri but treats the slash as the path separator which should not be esacped."
   (fluidinfo-escape-string-for-uri tag-or-namespace-name (list ?/ ?- ?. ?_ ?~)))
 
-(defun  fluidinfo-send-request (method url-extra query-args body accept-value extra-headers)
+(defun fluidinfo-send-request (method url-extra query-args body accept-value extra-headers)
   "The general purpose helper function to do the actual call to
 the Fluidinfo server"
   (let ((extra-headers extra-headers))
@@ -128,7 +128,7 @@ the Fluidinfo server"
                              (mail-fetch-field "X-FluidDB-Request-Id"))))
           (kill-buffer buffer)
           (if (or (string-equal content-type "application/json")
-                  (string-equal content-type "application/vnd.fluiddb.value+json6"))
+                  (string-equal content-type "application/vnd.fluiddb.value+json"))
               (setq content (json-read-from-string content)))
           (if status-ok
               (list status-ok content status content-type)

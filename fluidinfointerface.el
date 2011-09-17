@@ -276,7 +276,7 @@ into buffer-local list for traversal."
                                 (if is-ok
                                     (progn
                                       (insert-string (format "Type:   %s\n" mime-type))
-                                      (insert-string (format "Length: %s\n" (length value)))
+                                      (insert-string (format "Length: %s\n" (ignore-errors (length value))))
                                       (cond 
                                        ((or (string-equal "image/png" mime-type)
                                             (string-equal "image/jpg" mime-type)
@@ -374,7 +374,8 @@ This step *does* already add the common code of user authentication."
   (interactive)
   (let ((name (read-string "User name (empty for anon access): " (car *fluidinfo-credentials*) )))
     (if (string-equal "" name)
-        (setf *fluidinfo-credentials* nil)
+        (setf *fluidinfo-credentials* nil
+              *fluiddb-credentials* nil) ;; we also need to set this so it won't suddenly become active if set
       (let ((password (read-passwd "Password: ")))
         (setf *fluidinfo-credentials* (cons name password))))))
 

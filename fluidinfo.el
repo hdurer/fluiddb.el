@@ -30,6 +30,10 @@
 (defvar *fluidinfo-credentials* nil
   "Nil (use anonymous access) or a cons of user-name and password strings")
 
+(defvar *fluiddb-credentials* nil
+  "Legacy variable.  Nil (use anonymous access) or a cons of user-name and password strings.
+Don't use this variable anymore, use *fluidinfo-credentials* instead.")
+
 (defvar *fluidinfo-server* "fluiddb.fluidinfo.com"
   "The server to use for calls -- either the main instance or sandbox")
 
@@ -83,12 +87,14 @@ This is similar to fluidinfo-escape-string-for-uri but treats the slash as the p
 the Fluidinfo server"
   (let ((extra-headers extra-headers))
     (save-excursion
-      (if *fluidinfo-credentials*
-          (push (cons "Authorization"
-                      (concat "Basic "
-                              (base64-encode-string
-                               (concat (car *fluidinfo-credentials*) ":" (cdr *fluidinfo-credentials*)))))
-                extra-headers))
+      ;; for legacy reasons we check either of these vars.  The new one has precedence
+      (let ((credentials (or *fluidinfo-credentials* *fluiddb-credentials*)))
+        (if credentials
+            (push (cons "Authorization"
+                        (concat "Basic "
+                                (base64-encode-string
+                                 (concat (car credentials) ":" (cdr credentials)))))
+                extra-headers)))
       (when query-args
         (loop 
          for first = t then nil
